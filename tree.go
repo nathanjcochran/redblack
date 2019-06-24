@@ -171,10 +171,152 @@ func insertRepair(n *node) {
 	}
 }
 
+func (n *node) find(val int) *node {
+	cur := n
+	for cur != nil {
+		if val < cur.val {
+			cur = cur.left
+		} else if val > cur.val {
+			cur = cur.right
+		} else {
+			return cur
+		}
+	}
+	return nil
+}
+
+func (t *Tree) Remove(val int) {
+	n := t.root.find(val)
+	if n == nil {
+		return
+	}
+
+	x := nodeToRemove(n)
+	t.remove(x)
+}
+
+func nodeToRemove(n *node) *node {
+	if n.left == nil || n.right == nil {
+		return n
+	}
+
+	pre := n.left
+	for pre.right != nil {
+		pre = pre.right
+	}
+	n.val = pre.val
+
+	return pre
+}
+
+// Precondition: node has at most one non-leaf child
+func (t *Tree) remove(n *node) {
+	// Find non-leaf child, or nil
+	var c *node
+	if n.left == nil {
+		c = n.right
+	} else {
+		c = n.left
+	}
+
+	// Black node - if it has a child, it's red
+	if n.black {
+		if c != nil {
+			c.black = true
+			c.parent = n.parent
+		} else {
+			// Black node has no children
+			removeRepair(n)
+		}
+	}
+
+	// Remove node
+	p := n.parent
+	if p == nil {
+		t.root = c
+	} else if p.left == n {
+		p.left = c
+		t.root = p.root()
+	} else {
+		p.right = c
+		t.root = p.root()
+	}
+}
+
+func removeRepair(n *node) {
+	for {
+		// Case 1 - node is root
+		if n.parent == nil {
+			return
+		}
+
+		// Case 2 - sibling is red (parent is black)
+		if s := n.sibling(); !s.black {
+			p := n.parent
+			p.black = false
+			s.black = true
+			if n == p.left {
+				p.rotateLeft()
+			} else {
+				p.rotateRight()
+			}
+		}
+
+		p := n.parent
+		s := n.sibling() // Sibling is black
+		if (s.left == nil || s.left.black) &&
+			(s.right == nil || s.right.black) {
+
+			if p.black { // Case 3 - all black
+				s.black = false
+				n = p
+				continue
+			} else { // Case 4 - red parent, all black children
+				p.black = true
+				s.black = false
+				return
+			}
+		} else if n == p.left && // Case 5 - right sibling's left child is red
+			s.left != nil && !s.left.black &&
+			(s.right == nil || s.right.black) {
+			s.black = false
+			s.left.black = true
+			s.rotateRight()
+		} else if n == p.right && // Case 5 - left sibling's right child is red
+			s.right != nil && !s.right.black &&
+			(s.left == nil || s.left.black) {
+			s.black = false
+			s.right.black = true
+			s.rotateLeft()
+		}
+
+		p = n.parent
+		s = n.sibling()
+		if n == p.left { // Case 6 - right sibling's right child is red
+			s.right.black = true
+			p.rotateLeft()
+		} else { // Case 6 = left sibling's left child is red
+			s.left.black = true
+			p.rotateRight()
+		}
+		return
+	}
+}
+
 func (t *Tree) String() string {
 	buf := &bytes.Buffer{}
 	if t.root != nil {
 		t.root.string(buf)
+	} else {
+		fmt.Fprintf(buf, "()")
+	}
+	return buf.String()
+}
+
+func (n *node) String() string {
+	buf := &bytes.Buffer{}
+	if n != nil {
+		n.string(buf)
 	}
 	return buf.String()
 }

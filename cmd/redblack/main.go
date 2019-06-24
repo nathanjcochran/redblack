@@ -1,44 +1,49 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/nathanjcochran/redblack"
 )
 
 func main() {
 	t := &redblack.Tree{}
-	for _, arg := range parseArgs() {
-		t.Insert(arg)
+	fmt.Println(t)
+
+	scanner := bufio.NewScanner(os.Stdin)
+	for scanner.Scan() {
+		text := strings.TrimSpace(scanner.Text())
+
+		if len(text) == 0 {
+			continue
+		}
+
+		var del bool
+		if text[0] == 'd' {
+			del = true
+			text = strings.TrimSpace(text[1:])
+		}
+
+		val, err := strconv.Atoi(text)
+		if err != nil {
+			fmt.Println("Error: invalid integer")
+			continue
+		}
+
+		switch del {
+		case false:
+			t.Insert(val)
+		case true:
+			t.Remove(val)
+		}
+
 		fmt.Println(t)
 	}
-}
-
-func usage() {
-	fmt.Printf("Usage: %s <int>...\n", os.Args[0])
-	os.Exit(2)
-}
-
-func parseArgs() []int {
-	if len(os.Args) == 1 {
-		usage()
+	if err := scanner.Err(); err != nil {
+		fmt.Printf("Error reading from stdin: %s", err)
 	}
-
-	var ints []int
-	for _, arg := range os.Args[1:] {
-		switch arg {
-		case "-h", "--help":
-			usage()
-		}
-
-		i, err := strconv.Atoi(arg)
-		if err != nil {
-			fmt.Printf("Invalid int: %s\n", arg)
-			usage()
-		}
-		ints = append(ints, i)
-	}
-	return ints
 }
